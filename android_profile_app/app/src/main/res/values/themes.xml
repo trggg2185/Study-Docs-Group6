@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.ProfileApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/teal_primary</item>
+        <item name="colorPrimaryVariant">@color/teal_secondary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="android:statusBarColor">@color/teal_primary</item>
+    </style>
+
+    <!-- Style biến ShapeableImageView thành hình tròn hoàn hảo 50% -->
+    <style name="CircleImageView">
+        <item name="cornerSize">50%</item>
+    </style>
+</resources>

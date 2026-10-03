@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Giới Thiệu Bản Thân</string>
+    <string name="profile_name">Nguyễn Thế Trưởng</string>
+    <string name="profile_title">Mobile &amp; Backend Developer</string>
+    <string name="bio_title">Tiểu Sử Bản Thân</string>
+    <string name="bio_content">Xin chào! Tôi là một lập trình viên đam mê công nghệ và phát triển ứng dụng di động Android/Flutter cùng hệ thống Backend. Tôi luôn tìm tòi học hỏi các công nghệ mới, hướng tới việc tạo ra những sản phẩm mượt mà, tối ưu trải nghiệm người dùng và giải quyết hiệu quả các bài toán thực tế.</string>
+    <string name="social_title">Kết Nối Mạng Xã Hội</string>
+    <string name="btn_github">GitHub</string>
+    <string name="btn_facebook">Facebook</string>
+    <string name="btn_linkedin">LinkedIn</string>
+    <string name="btn_email">Gửi Email</string>
+</resources>
+
