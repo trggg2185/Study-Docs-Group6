@@ -255,6 +255,139 @@ sequenceDiagram
 | **Sửa** | Update Firestore → Stream tự động phát |
 | **Xóa** | Delete Firestore + xóa file Storage |
 
+### 6.5. Thiết kế Cơ sở dữ liệu Cloud Firestore (Data Schema & Indexing)
+
+> **Người thiết kế & phụ trách:** Nguyễn Đăng Đại
+
+Toàn bộ thông tin tài liệu được quản lý tập trung trong Root Collection `documents`:
+
+#### Bảng cấu trúc trường dữ liệu (Collection `documents`):
+
+| Trường (Field) | Kiểu dữ liệu | Bắt buộc | Mô tả & Ràng buộc |
+|---|---|:---:|---|
+| `id` | `String` | Có | ID của Document do Firestore tự tạo hoặc UUID |
+| `title` | `String` | Có | Tiêu đề tài liệu (1 - 200 ký tự) |
+| `description` | `String` | Không | Mô tả tóm tắt nội dung tài liệu |
+| `type` | `String` | Có | Phân loại tài liệu: `lecture` (Bài giảng), `exercise` (Bài tập), `reference` (Tham khảo) |
+| `subject` | `String` | Có | Tên môn học (vd: Lập trình di động, Giải tích...) |
+| `filePath` | `String` | Không | Đường dẫn file trên thiết bị ban đầu (nếu có) |
+| `fileUrl` | `String` | Có | URL tải xuống bảo mật từ Cloud Storage |
+| `ownerId` | `String` | Có | UID người sở hữu từ Firebase Authentication (`request.auth.uid`) |
+| `fileSize` | `Number (int)` | Không | Kích thước file tính bằng bytes (phục vụ thống kê dung lượng) |
+| `categoryId` | `String` | Không | ID danh mục mở rộng |
+| `createdAt` | `Timestamp` | Có | Thời gian tạo trên server (`FieldValue.serverTimestamp()`) |
+| `updatedAt` | `Timestamp` | Có | Thời gian cập nhật gần nhất (`FieldValue.serverTimestamp()`) |
+
+#### Cấu hình Composite Indexes trên Firestore:
+Để phục vụ truy vấn thời gian thực và lọc tài liệu nhanh chóng theo từng người dùng, các Composite Index sau được thiết lập:
+1. `ownerId` (Ascending) + `updatedAt` (Descending): Dùng cho màn hình danh sách tài liệu cá nhân mới nhất.
+2. `ownerId` (Ascending) + `type` (Ascending) + `updatedAt` (Descending): Dùng cho bộ lọc theo loại tài liệu (Bài giảng / Bài tập / Tham khảo).
+3. `ownerId` (Ascending) + `subject` (Ascending) + `updatedAt` (Descending): Dùng cho bộ lọc theo môn học.
+
+---
+
+### 6.6. Thiết kế Cấu trúc Lưu trữ Cloud Storage
+
+> **Người thiết kế & phụ trách:** Nguyễn Đăng Đại
+
+#### Cấu trúc cây thư mục (Bucket Hierarchy):
+```text
+gs://<firebase-storage-bucket>/
+└── documents/
+    └── {userId}/                         <-- Phân vùng riêng theo UID người dùng
+        ├── 1712658900000_de_cuong_toan.pdf
+        ├── 1712659120000_slide_flutter_tuan1.pptx
+        └── 1712659340000_bai_tap_tuan3.docx
+```
+
+#### Quy chuẩn đặt tên và kiểm soát:
+1. **Phân vùng người dùng (`userId`):** Mỗi người dùng chỉ có quyền ghi/đọc trong thư mục chứa UID của chính họ, tương thích trực tiếp với Firebase Storage Rules:
+   ```javascript
+   match /documents/{userId}/{allPaths=**} {
+     allow read, write: if request.auth != null && request.auth.uid == userId;
+   }
+   ```
+2. **Quy tắc đặt tên file duy nhất:** `${timestamp}_${sanitizedFileName}` nhằm ngăn ngừa hiện tượng ghi đè khi người dùng upload nhiều file có tên trùng nhau ở các thời điểm khác nhau.
+3. **MIME Type Detection:** Tự động gán metadata `contentType` tương ứng (`application/pdf`, `image/png`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`...) để trình duyệt và app mở file chính xác.
+4. **Giới hạn kích thước:** Giới hạn file tối đa **20MB** để đảm bảo tối ưu chi phí Cloud Storage Spark Plan và hiệu năng đường truyền di động.
+
+---
+
+### 6.7. Luồng Giao dịch Bù trừ (Rollback & Anti-Orphaned Files)
+
+> **Vấn đề kỹ thuật:** Quá trình tải tài liệu lên Cloud gồm 2 thao tác độc lập:
+> 1. Upload file vật lý lên Cloud Storage.
+> 2. Ghi metadata chứa `downloadUrl` vào Cloud Firestore.
+>
+> Nếu bước 1 thành công nhưng bước 2 gặp lỗi (mất mạng đột ngột, lỗi xác thực Firestore Rules), file trên Storage sẽ bị bỏ rơi (**Orphaned File**), gây lãng phí dung lượng lưu trữ đám mây.
+
+#### Quy trình xử lý Rollback trong `CloudDocumentStruct`:
+
+```mermaid
+flowchart TD
+    Start([Bắt đầu: Thêm tài liệu]) --> V1[Validate dữ liệu đầu vào]
+    V1 --> AuthCheck{Đã đăng nhập?}
+    AuthCheck -- Chưa --> ErrAuth[Báo lỗi: Chưa xác thực]
+    AuthCheck -- Rồi --> UpStorage[Upload file lên Cloud Storage\nLắng nghe tiến trình onProgress]
+    
+    UpStorage --> CheckUp{Upload Storage thành công?}
+    CheckUp -- Thất bại --> ErrStorage[Thông báo lỗi upload file]
+    CheckUp -- Thành công --> GetUrl[Nhận downloadUrl & Metadata]
+    
+    GetUrl --> SaveFS[Ghi metadata vào Cloud Firestore]
+    SaveFS --> CheckFS{Ghi Firestore thành công?}
+    CheckFS -- Thành công --> Success([Hoàn tất: Trả về Document ID])
+    CheckFS -- Thất bại --> Rollback[Khối CATCH kích hoạt Rollback:\nXóa file vừa tải trên Storage]
+    Rollback --> ErrFS[Báo lỗi cho người dùng\nHệ thống sạch, không phát sinh file rác]
+
+    style Success fill:#C8E6C9,stroke:#2E7D32,stroke-width:2px;
+    style Rollback fill:#FFCDD2,stroke:#C62828,stroke-width:2px;
+```
+
+---
+
+### 6.8. Cơ chế Đồng bộ Ngoại tuyến (Offline Persistence) & Cache Sync
+
+1. **Local Cache Engine:**
+   * Cloud Firestore SDK tích hợp sẵn bộ nhớ đệm cục bộ (SQLite trên Android/iOS, IndexedDB trên Web).
+   * Khi ứng dụng mở, Firestore tự động đọc dữ liệu từ local cache trước để hiển thị giao diện tức thì (zero latency), sau đó kết nối mạng và kéo dữ liệu mới nhất (delta sync).
+2. **Hàng đợi ghi ngoại tuyến (Offline Write Queue):**
+   * Nếu người dùng tạo hoặc sửa tài liệu khi mất kết nối mạng, thao tác ghi được ghi nhận ngay vào Local Cache và giao diện cập nhật lập tức (`hasPendingWrites == true`).
+   * Khi thiết bị có mạng trở lại, SDK tự động đẩy các thay đổi trong hàng đợi lên máy chủ Google mà không cần người dùng thao tác lại.
+
+---
+
+### 6.9. Phân lớp Kiến trúc Tích hợp (Architectural Layering)
+
+Mô hình tích hợp tuân thủ chặt chẽ kiến trúc phân lớp sạch (Clean Architecture / Cashew):
+
+```text
+┌────────────────────────────────────────────────────────┐
+│ 1. PRESENTATION LAYER (Flutter UI)                     │
+│    • HomePage, DocumentFormPage, DocumentDetailPage   │
+│    • Dùng StreamBuilder lắng nghe reactive streams     │
+└───────────────────────────▲────────────────────────────┘
+                            │ Provider / Notifier
+┌───────────────────────────┴────────────────────────────┐
+│ 2. BUSINESS LOGIC & COORDINATION LAYER                 │
+│    • CloudDocumentStruct (Xác thực, Rollback, Rules)   │
+│    • DocumentModel (DTO thuần Dart, toMap / fromMap)   │
+└─────────────▲────────────────────────────▲─────────────┘
+              │                            │
+┌─────────────┴───────────────┐ ┌──────────┴─────────────┐
+│ 3. STORAGE SERVICE          │ │ 4. FIRESTORE SERVICE   │
+│    • FirebaseStorage        │ │    • FirebaseFirestore │
+│    • Upload progress stream │ │    • Snapshot stream   │
+│    • Delete file & rollback │ │    • Count queries     │
+└─────────────▲───────────────┘ └──────────▲─────────────┘
+              │                            │
+┌─────────────┴────────────────────────────┴─────────────┐
+│ 5. GOOGLE CLOUD INFRASTRUCTURE (Firebase Cloud)        │
+│    • Cloud Storage Bucket    • Cloud Firestore NoSQL   │
+│    • Security Rules          • Firebase Authentication │
+└────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## 7. 🔥 Hướng dẫn setup Firebase với Flutter
@@ -558,7 +691,62 @@ StreamBuilder<List<Map<String, dynamic>>>(
 | 11 | Demo / Code mẫu | Cả nhóm |
 | 12 | Kết luận & Hướng phát triển | Trưởng |
 
-### 10.2. Setup tài khoản Firebase cho nhóm
+### 10.2. Nội dung chi tiết
+
+#### Slide 2: Firebase là gì?
+- Nền tảng Backend-as-a-Service (BaaS) của Google.
+- Cung cấp: Auth, Firestore, Storage, Hosting, Functions, Analytics.
+- **Ưu điểm**: Miễn phí cơ bản, tích hợp Flutter tốt.
+- **Nhược điểm**: Phụ thuộc nhà cung cấp, chi phí tăng khi scale.
+
+#### Slide 6: Firebase Authentication
+- Hỗ trợ Google, Email/Password, Facebook, Apple...
+- Quản lý session tự động qua `authStateChanges()`.
+- Tích hợp dễ dàng qua `firebase_auth` + `google_sign_in`.
+
+#### Slide 7: Cloud Storage – Giải pháp Lưu trữ Tệp Học tập Tập trung
+> **Người thuyết trình:** Nguyễn Đăng Đại
+
+* **Mục tiêu giải quyết:** Khắc phục triệt để nhược điểm lưu tệp cục bộ trên máy (mất máy là mất bài, không thể chia sẻ hoặc truy cập từ thiết bị khác).
+* **Kiến trúc & Cơ chế hoạt động:**
+  - **Phân cấp thư mục an toàn:** `documents/{userId}/{timestamp}_{fileName}` đảm bảo quyền riêng tư và tránh trùng tên file giữa các sinh viên.
+  - **Lắng nghe tiến trình thời gian thực (Progress Listener):** Sử dụng Stream `uploadTask.snapshotEvents` tính toán `bytesTransferred / totalBytes` giúp vẽ thanh tiến trình % trực quan trên UI Flutter.
+  - **Nhận diện định dạng tệp thông minh:** Tự động phát hiện và gán `contentType` (`application/pdf`, `docx`, `pptx`...) vào metadata để ứng dụng di động mở file chuẩn xác.
+  - **Bảo mật nhiều lớp:** Kết hợp Firebase Authentication và Storage Security Rules; sinh viên chỉ được phép đọc/ghi vào đúng thư mục chứa `userId` của mình.
+* **Kịch bản thuyết trình (Speaker Notes cho Đại):**
+  > *"Kính thưa thầy/cô và các bạn, em là Nguyễn Đăng Đại. Tiếp nối phần Xác thực của bạn Hà, em xin trình bày về giải pháp lưu trữ tệp trên Cloud Storage. Ở phiên bản cũ, toàn bộ file PDF và Word đều nằm ở bộ nhớ máy của người dùng, dẫn đến rủi ro mất mát dữ liệu và không thể đồng bộ. Với Cloud Storage, chúng em xây dựng `StorageService` cho phép tải tệp lên máy chủ đám mây của Google với cơ chế phân vùng thư mục theo `userId`. Đặc biệt, chúng em đã cài đặt bộ lắng nghe tiến trình upload thời gian thực giúp hiển thị phần trăm tải lên mượt mà cho sinh viên. Đồng thời, các quy tắc Storage Rules được thiết lập nghiêm ngặt, đảm bảo không người dùng nào có thể truy cập trái phép vào tài liệu của người khác."*
+* **Câu hỏi phản biện dự kiến (Q&A):**
+  - **Q:** *Nếu người dùng upload 2 file cùng tên "bai_tap.pdf" thì hệ thống xử lý thế nào?*
+    **A:** Hệ thống tự động prefix timestamp milli-giây vào trước tên file (`${timestamp}_sanitizedFileName`), đảm bảo tên file luôn là duy nhất (unique), không xảy ra xung đột hay ghi đè.
+  - **Q:** *Khi upload file 50MB bị đứt mạng giữa chừng thì sao?*
+    **A:** `UploadTask` của Firebase SDK hỗ trợ tự động thử lại (resumable uploads) đối với các gói tin chưa hoàn thành và bắn ra mã lỗi `FirebaseException` rõ ràng để ứng dụng hiển thị thông báo thân thiện.
+
+---
+
+#### Slide 8: Cloud Firestore – Cơ sở Dữ liệu NoSQL & Đồng bộ Thời gian thực
+> **Người thuyết trình:** Nguyễn Đăng Đại
+
+* **Mục tiêu giải quyết:** Thay thế SQLite cục bộ thành cơ sở dữ liệu đám mây NoSQL có khả năng đồng bộ thời gian thực và tự động sao lưu.
+* **Kiến trúc & Cơ chế hoạt động:**
+  - **Mô hình Document - Collection:** Dữ liệu metadata tài liệu được tổ chức dưới dạng các JSON-like documents trong collection `documents`, linh hoạt mở rộng trường dữ liệu mà không cần migration phức tạp như SQLite.
+  - **Đồng bộ thời gian thực (Real-time Synchronization):** Sử dụng `collection.snapshots()` trả về một `Stream<List<DocumentModel>>`. Bất kỳ thay đổi nào từ một thiết bị sẽ ngay lập tức được đẩy về giao diện của tất cả các phiên làm việc thông qua `StreamBuilder`.
+  - **Khả năng hoạt động ngoại tuyến (Offline Persistence):** SDK tự động duy trì local cache (SQLite ngầm dưới native). Khi mất mạng, người dùng vẫn xem và sửa được dữ liệu; khi có mạng lại, hệ thống tự động đẩy dữ liệu lên Cloud.
+  - **Chống rác dữ liệu (Compensating Rollback):** Trong tầng nghiệp vụ `CloudDocumentStruct`, nếu ghi metadata Firestore thất bại, hệ thống tự động gọi hàm dọn dẹp để xóa file vừa tải lên Storage, bảo đảm toàn vẹn hệ thống.
+  - **Tối ưu chi phí:** Áp dụng Count Aggregation Query (`collection.count()`) giúp đếm số lượng tài liệu mà chỉ tiêu tốn 1 lần đọc chi phí thay vì đọc toàn bộ documents.
+* **Kịch bản thuyết trình (Speaker Notes cho Đại):**
+  > *"Sau khi file đã được đẩy lên Cloud Storage, việc quản lý thông tin như tiêu đề, môn học, phân loại và đường link tải về sẽ do Cloud Firestore đảm nhiệm. Thay vì mô hình bảng cứng nhắc của SQLite, Firestore sử dụng cơ sở dữ liệu tài liệu NoSQL. Điểm mạnh vượt trội của Firestore mà chúng em tận dụng là tính năng Real-time Stream. Khi sinh viên cập nhật hoặc thêm tài liệu mới, giao diện ứng dụng sẽ lập tức tự động cập nhật mà không cần người dùng kéo thả để refresh. Hơn nữa, nhờ cơ chế Offline Persistence, ứng dụng vẫn hoạt động mượt mà ngay cả khi sinh viên ở giảng đường có sóng wifi yếu. Đặc biệt, để tránh tình trạng phát sinh file rác trên Storage khi kết nối chập chờn, em đã lập trình cơ chế Rollback: nếu lưu Firestore thất bại, file trên Storage sẽ lập tức được thu hồi và dọn dẹp sạch sẽ."*
+* **Câu hỏi phản biện dự kiến (Q&A):**
+  - **Q:** *Tại sao không lưu trực tiếp file vào Firestore mà phải tách ra Cloud Storage?*
+    **A:** Giới hạn kích thước tối đa của một document trong Firestore chỉ là 1MB và chi phí lưu trữ dữ liệu Firestore đắt hơn nhiều so với Cloud Storage. Tách riêng Storage để lưu trữ file nhị phân (dung lượng lớn, chi phí rẻ) và Firestore để lưu metadata (nhanh, truy vấn mạnh mẽ) là kiến trúc chuẩn (best practice) của Google Cloud.
+  - **Q:** *Firestore có hỗ trợ tìm kiếm toàn văn (full-text search) như SQLite FTS không?*
+    **A:** Firestore không hỗ trợ native full-text search mà chỉ hỗ trợ tìm kiếm tiền tố (prefix/exact match). Với quy mô tài liệu học tập của bài tập, tìm kiếm theo tiền tố môn học, kết hợp lọc theo loại tài liệu (`type`) và sắp xếp theo ngày cập nhật là hoàn toàn đáp ứng tốt nhu cầu thực tế. Với quy mô lớn hơn trong tương lai, nhóm sẽ đề xuất tích hợp thêm Algolia hoặc Typesense thông qua Cloud Functions.
+
+#### Slide 10: Bảo mật, chi phí, hiệu suất
+- **Bảo mật**: Security Rules + Auth + App Check.
+- **Chi phí**: Spark Plan miễn phí.
+- **Hiệu suất**: Real-time, offline-first, region Singapore.
+
+### 10.3. Setup tài khoản Firebase cho nhóm
 
 1. **Trưởng** tạo project → thêm thành viên vào **Users and permissions** (quyền Editor).
 2. Cùng dùng chung project.
@@ -907,13 +1095,12 @@ gitGraph
 
 ### 13.2. Checklist tổng
 
-- [ ] **Trưởng**: Tạo repo + nhánh `main`, `develop`, mời thành viên, tạo Firebase project.
-- [ ] **Hà**: Tạo nhánh `feature/auth-ha`, setup Firebase, code Auth, PR.
-- [ ] **Đại**: Tạo nhánh `feature/storage-firestore-dai` (sau khi Hà merge), code Storage/Firestore, PR.
-- [ ] **Đức**: Tạo nhánh `feature/evaluation-duc`, viết tài liệu đánh giá, PR.
-- [ ] **Trưởng**: Review & merge tất cả PR vào `develop`, tổng hợp README trên `docs/architecture-truong`.
-- [ ] **Cả nhóm**: Review chéo, thống nhất nội dung.
-- [ ] **Trưởng**: Merge `develop` → `main`, tag `v1.0-submit`, nộp bài.
+- [ ] **Trưởng**: Tạo Firebase project, mời thành viên.
+- [ ] **Hà**: Chạy `flutterfire configure`, setup Google Sign-In.
+- [x] **Đại**: Viết hàm upload file + lưu Firestore & hoàn thiện Mục 6, Slide 7/8.
+- [ ] **Đức**: Viết bảng so sánh và đánh giá.
+- [ ] **Cả nhóm**: Làm slide phần mình, Trưởng tổng hợp.
+- [ ] **Cả nhóm**: Review chéo trước khi nộp.
 
 ### 13.3. Hướng dẫn cài đặt & chạy
 
