@@ -11,6 +11,10 @@ class DocumentModel {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  final String fileUrl;
+  final String ownerId;
+  final int? fileSize;
+
   const DocumentModel({
     required this.id,
     required this.title,
@@ -21,6 +25,9 @@ class DocumentModel {
     this.categoryId,
     required this.createdAt,
     required this.updatedAt,
+    this.fileUrl = '',
+    this.ownerId = '',
+    this.fileSize,
   });
 
   /// Copy với các trường được thay đổi
@@ -34,6 +41,9 @@ class DocumentModel {
     String? categoryId,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? fileUrl,
+    String? ownerId,
+    int? fileSize,
   }) {
     return DocumentModel(
       id: id ?? this.id,
@@ -45,11 +55,61 @@ class DocumentModel {
       categoryId: categoryId ?? this.categoryId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      fileUrl: fileUrl ?? this.fileUrl,
+      ownerId: ownerId ?? this.ownerId,
+      fileSize: fileSize ?? this.fileSize,
+    );
+  }
+
+  /// Chuyển model thành Map để lưu vào Firestore
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'description': description,
+      'type': type.name,
+      'subject': subject,
+      'filePath': filePath,
+      'fileUrl': fileUrl,
+      'ownerId': ownerId,
+      'fileSize': fileSize,
+      'categoryId': categoryId,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+  /// Tạo model từ Map (Firestore data)
+  factory DocumentModel.fromMap(Map<String, dynamic> map, {String? id}) {
+    DateTime parseDateTime(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is DateTime) return value;
+      if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+      // Nếu là Firestore Timestamp: gọi toDate() thông qua reflection/dynamic
+      try {
+        final dynamic ts = value;
+        if (ts.toDate != null) return ts.toDate() as DateTime;
+      } catch (_) {}
+      return DateTime.now();
+    }
+
+    return DocumentModel(
+      id: id ?? (map['id'] as String? ?? ''),
+      title: map['title'] as String? ?? '',
+      description: map['description'] as String? ?? '',
+      type: DocumentType.fromString(map['type'] as String? ?? 'reference'),
+      subject: map['subject'] as String? ?? '',
+      filePath: map['filePath'] as String? ?? '',
+      fileUrl: map['fileUrl'] as String? ?? '',
+      ownerId: map['ownerId'] as String? ?? '',
+      fileSize: map['fileSize'] as int?,
+      categoryId: map['categoryId'] as String?,
+      createdAt: parseDateTime(map['createdAt']),
+      updatedAt: parseDateTime(map['updatedAt']),
     );
   }
 
   @override
-  String toString() => 'DocumentModel(id: $id, title: $title, type: $type)';
+  String toString() => 'DocumentModel(id: $id, title: $title, type: $type, fileUrl: $fileUrl)';
 }
 
 /// Enum loại tài liệu
