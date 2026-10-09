@@ -31,9 +31,8 @@ class DocumentDetailPage extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi mở liên kết: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Lỗi khi mở liên kết: $e')));
       }
     }
   }
@@ -65,9 +64,8 @@ class DocumentDetailPage extends StatelessWidget {
       await context.read<DocumentStruct>().deleteById(doc.id);
       if (context.mounted) {
         Navigator.pop(context); // Quay về trang trước
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đã xóa "${doc.title}"')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Đã xóa "${doc.title}"')));
       }
     }
   }
@@ -139,9 +137,8 @@ class DocumentDetailPage extends StatelessWidget {
                 // === Tiêu đề ===
                 Text(
                   doc.title,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
 
@@ -157,9 +154,8 @@ class DocumentDetailPage extends StatelessWidget {
                 if (doc.description.isNotEmpty) ...[
                   Text(
                     'Mô tả',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
                   Card(
@@ -253,7 +249,8 @@ class DocumentDetailPage extends StatelessWidget {
   /// Hàng thông tin đường dẫn file (hỗ trợ mở link & copy)
   Widget _filePathRow(BuildContext context, String filePath) {
     final hasPath = filePath.isNotEmpty;
-    final isUrl = filePath.startsWith('http://') || filePath.startsWith('https://');
+    final isUrl =
+        filePath.startsWith('http://') || filePath.startsWith('https://');
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -275,7 +272,9 @@ class DocumentDetailPage extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontStyle: hasPath ? FontStyle.normal : FontStyle.italic,
                 color: hasPath
-                    ? (isUrl ? Colors.blue : Theme.of(context).colorScheme.primary)
+                    ? (isUrl
+                          ? Colors.blue
+                          : Theme.of(context).colorScheme.primary)
                     : Colors.grey,
                 decoration: isUrl ? TextDecoration.underline : null,
               ),
@@ -287,7 +286,11 @@ class DocumentDetailPage extends StatelessWidget {
           if (hasPath) ...[
             if (isUrl)
               IconButton(
-                icon: const Icon(Icons.open_in_new, size: 18, color: Colors.blue),
+                icon: const Icon(
+                  Icons.open_in_new,
+                  size: 18,
+                  color: Colors.blue,
+                ),
                 tooltip: 'Mở liên kết',
                 visualDensity: VisualDensity.compact,
                 onPressed: () => _launchFilePath(context, filePath),
