@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>Firebase × StudyDocs — Slide thuyết trình</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101827;
+      --surface: #172337;
+      --surface-2: #1d2c42;
+      --text: #f4f7fb;
+      --muted: #a8b5c8;
+      --amber: #ffca28;
+      --orange: #ff8f00;
+      --cyan: #62d8e8;
+      --green: #81d9aa;
+      --red: #ff8a80;
+      --line: rgba(210, 224, 243, .14);
+      --radius: 22px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { width: 100%; height: 100%; margin: 0; }
+
+    body {
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 15% 20%, rgba(255, 143, 0, .09), transparent 34%),
+        radial-gradient(ellipse at 90% 84%, rgba(98, 216, 232, .08), transparent 32%),
+        var(--bg);
+      color: var(--text);
+    }
+
+    button { font: inherit; }
+
+    .deck {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding: clamp(22px, 4vw, 58px) clamp(22px, 6vw, 88px) 94px;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: none;
+      overflow: auto;
+      padding: clamp(28px, 5vw, 72px) clamp(22px, 8vw, 120px) 112px;
+      animation: arrive .32s ease both;
+    }
+
+    .slide.active { display: flex; flex-direction: column; justify-content: safe center; }
+    .slide.cover { background: radial-gradient(ellipse at 76% 43%, rgba(255, 202, 40, .1), transparent 32%); }
+
+    @keyframes arrive {
+      from { opacity: .3; transform: translateY(9px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 18px;
+      color: var(--amber);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      width: 25px;
+      height: 2px;
+      background: currentColor;
+      content: "";
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 900px; margin-bottom: 22px; font-size: clamp(3rem, 8vw, 7.2rem); line-height: .98; letter-spacing: -.065em; }
+    h2 { max-width: 1050px; margin-bottom: 28px; font-size: clamp(2.1rem, 5.3vw, 4.4rem); line-height: 1.04; letter-spacing: -.05em; }
+    h3 { margin-bottom: 10px; font-size: clamp(1rem, 1.55vw, 1.32rem); }
+    p { color: var(--muted); line-height: 1.65; }
+    .lead { max-width: 720px; font-size: clamp(1.1rem, 2.1vw, 1.55rem); line-height: 1.55; }
+    .accent { color: var(--amber); }
+    .cyan { color: var(--cyan); }
+
+    .cover-content { position: relative; z-index: 1; max-width: 980px; }
+    .cover h1 span { color: var(--amber); }
+    .cover-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 36px; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .035);
+      color: #dce5f1;
+      font-size: .88rem;
+    }
+    .firebase-mark {
+      position: absolute;
+      top: 50%;
+      right: clamp(24px, 11vw, 170px);
+      width: clamp(110px, 18vw, 235px);
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      transform: translateY(-50%);
+      border: 1px solid rgba(255, 202, 40, .22);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 202, 40, .15), rgba(255, 143, 0, .02) 68%, transparent 69%);
+      color: var(--amber);
+      font-size: clamp(4.5rem, 12vw, 9.5rem);
+      filter: drop-shadow(0 0 45px rgba(255, 143, 0, .16));
+    }
+
+    .grid { display: grid; gap: 16px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card {
+      min-width: 0;
+      padding: clamp(17px, 2vw, 25px);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, rgba(29, 44, 66, .88), rgba(23, 35, 55, .82));
+    }
+    .card p:last-child { margin-bottom: 0; }
+    .card .icon { display: block; margin-bottom: 16px; font-size: 1.7rem; }
+    .card strong { color: var(--text); }
+    .card ul { margin: 12px 0 0; padding-left: 1.15rem; color: var(--muted); line-height: 1.7; }
+    .card li + li { margin-top: 5px; }
+    .callout {
+      margin-top: 20px;
+      padding: 15px 19px;
+      border-left: 3px solid var(--amber);
+      border-radius: 0 12px 12px 0;
+      background: rgba(255, 202, 40, .07);
+      color: #e8edf5;
+      line-height: 1.55;
+    }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0;
+      margin-top: 12px;
+    }
+    .timeline article { position: relative; padding: 22px 22px 8px 0; }
+    .timeline article::before {
+      display: block;
+      width: 12px;
+      height: 12px;
+      margin-bottom: 18px;
+      border-radius: 50%;
+      background: var(--amber);
+      box-shadow: 0 0 0 6px rgba(255, 202, 40, .12);
+      content: "";
+    }
+    .timeline article:not(:last-child)::after {
+      position: absolute;
+      top: 27px;
+      right: 0;
+      left: 15px;
+      height: 1px;
+      background: var(--line);
+      content: "";
+    }
+    .timeline time { color: var(--amber); font-size: .85rem; font-weight: 800; }
+    .timeline h3 { margin: 8px 0; }
+
+    .comparison {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(23, 35, 55, .74);
+    }
+    .comparison-row {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--line);
+      color: #dce5f1;
+    }
+    .comparison-row:last-child { border-bottom: 0; }
+    .comparison-row.head { background: rgba(255, 255, 255, .045); color: var(--muted); font-size: .83rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+    .comparison-row > :first-child { color: var(--text); font-weight: 700; }
+    .yes { color: var(--green); }
+    .no { color: #ffb4a8; }
+
+    .service-card { position: relative; min-height: 225px; }
+    .service-card .service-tag { color: var(--amber); font-size: .75rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .service-card.auth { border-top: 3px solid var(--amber); }
+    .service-card.db { border-top: 3px solid var(--cyan); }
+    .service-card.storage { border-top: 3px solid var(--green); }
+    .service-card.rules { border-top: 3px solid #b59cff; }
+    .service-card.auth .service-tag { color: var(--amber); }
+    .service-card.db .service-tag { color: var(--cyan); }
+    .service-card.storage .service-tag { color: var(--green); }
+    .service-card.rules .service-tag { color: #b59cff; }
+    .quota { margin-top: 14px; color: var(--text); font-size: .88rem; }
+    .quota small { display: block; margin-top: 4px; color: var(--muted); }
+
+    .architecture {
+      display: grid;
+      grid-template-columns: 1fr auto 1.1fr auto 1fr;
+      gap: 12px;
+      align-items: stretch;
+      margin-top: 8px;
+    }
+    .arch-box {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 250px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .arch-box.app { border-color: rgba(98, 216, 232, .32); }
+    .arch-box.cloud { border-color: rgba(255, 202, 40, .32); }
+    .arch-box h3 { color: var(--cyan); }
+    .arch-box.cloud h3 { color: var(--amber); }
+    .arch-box p { margin-bottom: 0; font-size: .92rem; }
+    .arch-arrow { display: grid; place-items: center; color: var(--amber); font-size: 1.8rem; }
+    .mini-list { display: grid; gap: 9px; margin-top: 15px; }
+    .mini-list span { padding: 9px 11px; border-radius: 10px; background: rgba(255, 255, 255, .045); color: #e7edf6; font-size: .88rem; }
+    .flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; counter-reset: step; }
+    .flow-step { position: relative; padding: 22px 18px 18px; border: 1px solid var(--line); border-radius: 18px; background: rgba(23, 35, 55, .82); }
+    .flow-step::before {
+      counter-increment: step;
+      content: "0" counter(step);
+      display: inline-grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      margin-bottom: 17px;
+      border-radius: 11px;
+      background: rgba(255, 202, 40, .12);
+      color: var(--amber);
+      font-size: .8rem;
+      font-weight: 900;
+    }
+    .flow-step:not(:last-child)::after { position: absolute; top: 37px; right: -15px; z-index: 1; color: var(--amber); content: "→"; }
+    .flow-step p { margin-bottom: 0; font-size: .9rem; }
+
+    .setup {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      counter-reset: setup;
+    }
+    .setup-step { min-height: 190px; padding: 18px; border: 1px solid var(--line); border-radius: 17px; background: rgba(23, 35, 55, .82); }
+    .setup-step::before { counter-increment: setup; content: "BƯỚC 0" counter(setup); display: block; margin-bottom: 14px; color: var(--amber); font-size: .72rem; font-weight: 900; letter-spacing: .11em; }
+    .setup-step p { margin: 0; font-size: .91rem; }
+    code {
+      padding: .15em .42em;
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 6px;
+      background: #0c1421;
+      color: #a8e7ef;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: .87em;
+    }
+    .codeblock {
+      display: block;
+      margin-top: 10px;
+      padding: 13px 15px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #0c1421;
+      color: #c8d5e5;
+      font: .82rem/1.7 ui-monospace, SFMono-Regular, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+    .security-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .security-card { min-height: 260px; }
+    .security-card h3 { color: var(--cyan); }
+    .security-card.storage-rule h3 { color: var(--green); }
+    .rule-line { display: block; white-space: normal; }
+    .rule-emphasis { color: var(--amber); }
+    .git-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 18px 0 0; }
+    .git-flow span { padding: 11px 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, .04); color: #e5edf7; }
+    .git-flow b { color: var(--amber); }
+    .faq-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .faq { padding: 17px 18px; border: 1px solid var(--line); border-radius: 16px; background: rgba(23, 35, 55, .82); }
+    .faq h3 { margin-bottom: 7px; }
+    .faq p { margin: 0; font-size: .9rem; }
+    .checklist { display: grid; gap: 11px; }
+    .check-item { display: flex; gap: 12px; align-items: flex-start; color: #e7edf6; line-height: 1.5; }
+    .check-item::before { flex: 0 0 23px; display: grid; width: 23px; height: 23px; place-items: center; border-radius: 50%; background: rgba(129, 217, 170, .15); color: var(--green); content: "✓"; font-weight: 900; }
+    .sources { display: grid; gap: 9px; margin: 14px 0 0; padding: 0; list-style: none; }
+    .sources a { color: var(--cyan); text-decoration-thickness: 1px; text-underline-offset: 3px; overflow-wrap: anywhere; }
+    .closing { max-width: 830px; }
+    .closing h2 { font-size: clamp(3rem, 7vw, 6.5rem); }
+    .closing .lead { margin-bottom: 25px; }
+
+    .controls {
+      position: fixed;
+      right: clamp(18px, 4vw, 54px);
+      bottom: 20px;
+      left: clamp(18px, 4vw, 54px);
+      z-index: 10;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      gap: 14px;
+      align-items: center;
+      padding: 11px 14px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: rgba(13, 21, 34, .86);
+      backdrop-filter: blur(14px);
+    }
+    .control-buttons { display: flex; gap: 7px; }
+    .control-button {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .control-button:hover { border-color: rgba(255, 202, 40, .55); color: var(--amber); }
+    .control-button:focus-visible, .dot:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+    .progress-wrap { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .progress-track { height: 4px; flex: 1; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .13); }
+    .progress-bar { width: 8.33%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--orange), var(--amber)); transition: width .25s ease; }
+    .counter { min-width: 58px; color: var(--muted); font: .82rem ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
+    .dots { display: flex; gap: 5px; }
+    .dot { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 99px; background: #536176; cursor: pointer; transition: width .2s, background .2s; }
+    .dot[aria-current="true"] { width: 22px; background: var(--amber); }
+    .hint { color: #8290a4; font-size: .75rem; white-space: nowrap; }
+
+    @media (max-width: 850px) {
+      .firebase-mark { right: 7vw; opacity: .32; }
+      .grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .architecture { grid-template-columns: 1fr; }
+      .arch-box { min-height: auto; }
+      .arch-arrow { transform: rotate(90deg); }
+      .flow, .setup { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .flow-step:nth-child(2)::after { display: none; }
+      .dots { display: none; }
+    }
+    @media (max-height: 700px) and (min-width: 561px) {
+      .slide { justify-content: flex-start; padding-top: 30px; padding-bottom: 92px; }
+      h2 { margin-bottom: 19px; font-size: clamp(1.9rem, 4.5vw, 3.1rem); }
+      .closing h2 { font-size: clamp(2.3rem, 5vw, 3.5rem); }
+      .card { padding: 16px; }
+      .card .icon { margin-bottom: 8px; }
+      .setup-step { min-height: 155px; }
+    }
+    @media (max-width: 560px) {
+      .slide { justify-content: flex-start; padding-top: 38px; }
+      .grid.two, .grid.three, .grid.four, .security-pair, .faq-list { grid-template-columns: 1fr; }
+      .timeline { grid-template-columns: 1fr; }
+      .timeline article { padding: 8px 0 15px 28px; }
+      .timeline article::before { position: absolute; top: 13px; left: 0; }
+      .timeline article:not(:last-child)::after { top: 27px; right: auto; bottom: -3px; left: 5px; width: 1px; height: auto; }
+      .comparison-row { grid-template-columns: .85fr 1fr 1fr; gap: 6px; padding: 12px; font-size: .82rem; }
+      .flow, .setup { grid-template-columns: 1fr; }
+      .flow-step:not(:last-child)::after { top: auto; right: 20px; bottom: -18px; transform: rotate(90deg); }
+      .flow-step:nth-child(2)::after { display: block; }
+      .controls { grid-template-columns: auto 1fr auto; }
+      .hint { display: none; }
+      .control-button { width: 35px; height: 35px; }
+      .cover h1 { font-size: clamp(3.1rem, 17vw, 5rem); }
+      .firebase-mark { top: 24%; right: 7%; width: 125px; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+    @media print {
+      @page { size: 16in 9in; margin: 0; }
+      html, body { width: auto; height: auto; overflow: visible; background: var(--bg) !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .slide, .slide.active { position: relative; display: flex !important; width: 16in; height: 9in; overflow: hidden; padding: .65in 1in 1in; break-after: page; animation: none; }
+      .slide:last-of-type { break-after: auto; }
+      .controls { display: none !important; }
+      .firebase-mark { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" aria-label="Slide thuyết trình Firebase cho StudyDocs">
+    <section class="slide cover active" aria-label="Slide 1: Firebase cho StudyDocs">
+      <div class="cover-content">
+        <p class="eyebrow">StudyDocs Cloud · Tích hợp backend</p>
+        <h1>Firebase<br><span>× StudyDocs</span></h1>
+        <p class="lead">Từ đăng nhập đến đồng bộ tài liệu — xây backend cloud gọn nhẹ cho ứng dụng Flutter.</p>
+        <div class="cover-meta">
+          <span class="pill">📱 Flutter</span>
+          <span class="pill">☁️ Google Firebase</span>
+          <span class="pill">🧑‍🤝‍🧑 Dự án nhóm</span>
+        </div>
+      </div>
+      <div class="firebase-mark" aria-hidden="true">ϟ</div>
+    </section>
+
+    <section class="slide" aria-label="Slide 2: Firebase là gì">
+      <p class="eyebrow">01 · Tổng quan</p>
+      <h2>Backend sẵn sàng,<br><span class="accent">để tập trung vào sản phẩm.</span></h2>
+      <div class="grid two">
+        <article class="card">
+          <span class="icon">🔥</span>
+          <h3>Firebase là gì?</h3>
+          <p>Nền tảng <strong>Backend-as-a-Service (BaaS)</strong> của Google: cung cấp dịch vụ backend cho ứng dụng web và di động mà không cần tự vận hành server.</p>
+        </article>
+        <article class="card">
+          <span class="icon">🧰</span>
+          <h3>Một nền tảng, nhiều năng lực</h3>
+          <p>Nhóm <strong>Build</strong> để xây ứng dụng, <strong>Release &amp; Monitor</strong> để phát hành và theo dõi, <strong>Engage</strong> để tương tác với người dùng.</p>
+        </article>
+      </div>
+      <div class="timeline">
+        <article><time>2011</time><h3>Khởi đầu</h3><p>Firebase được thành lập.</p></article>
+        <article><time>2014</time><h3>Google mua lại</h3><p>Nền tảng phát triển trong hệ sinh thái Google.</p></article>
+        <article><time>Hiện nay</time><h3>FlutterFire</h3><p>Tích hợp dịch vụ Firebase trong ứng dụng Flutter.</p></article>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="Slide 3: Vì sao chọn Firebase">
+      <p class="eyebrow">02 · Lựa chọn giải pháp</p>
+      <h2>Vì sao Firebase phù hợp<br><span class="accent">với StudyDocs?</span></h2>
+      <div class="comparison" role="table" aria-label="So sánh các lựa chọn backend">
+        <div class="comparison-row head" role="row"><span role="columnheader">Tiêu chí</span><span role="columnheader">Firebase</span><span role="columnheader">Tự xây backend</span></div>
+        <div class="comparison-row" role="row"><span role="rowheader">Khởi đầu</span><span class="yes">✓ Spark miễn phí</span><span class="no">Server &amp; DevOps</span></div>
+        <div class="comparison-row" role="row"><span role="rowheader">Tích hợp Flutter</span><span class="yes">✓ FlutterFire</span><span>Tuỳ triển khai</span></div>
+        <div class="comparison-row" role="row"><span role="rowheader">Realtime / offline</span><span class="yes">✓ Có sẵn</span><span class="no">Tự xây dựng</span></div>
+        <div class="comparison-row" role="row"><span role="rowheader">Độ phức tạp</span><span class="yes">Thấp</span><span class="no">Cao hơn</span></div>
+      </div>
+      <div class="callout"><strong>Kết luận:</strong> Firebase cung cấp đúng ba năng lực StudyDocs cần — xác thực, dữ liệu đồng bộ và lưu file — với tốc độ setup nhanh.</div>
+      <p style="margin:14px 0 0;font-size:.88rem">Cân nhắc: phụ thuộc nhà cung cấp, chi phí có thể tăng khi mở rộng, Firestore không tối ưu cho full-text search.</p>
+    </section>
+
+    <section class="slide" aria-label="Slide 4: Các dịch vụ chính">
+      <p class="eyebrow">03 · Dịch vụ cốt lõi</p>
+      <h2>Bốn mảnh ghép<br><span class="accent">cho vòng đời tài liệu.</span></h2>
+      <div class="grid four">
+        <article class="card service-card auth"><span class="icon">🔐</span><span class="service-tag">Identity</span><h3>Authentication</h3><p>Đăng nhập Google, quản lý session và cấp <code>uid</code> cho mỗi người dùng.</p><div class="quota">Dùng để phân tách dữ liệu</div></article>
+        <article class="card service-card db"><span class="icon">📄</span><span class="service-tag">Database</span><h3>Cloud Firestore</h3><p>Lưu metadata; hỗ trợ truy vấn, realtime stream và offline trên Android/iOS.</p><div class="quota">1 GB · 50k reads/ngày<small>Hạn mức được nêu trong tài liệu</small></div></article>
+        <article class="card service-card storage"><span class="icon">📦</span><span class="service-tag">File storage</span><h3>Cloud Storage</h3><p>Lưu PDF, Word, slide; upload có tiến độ và trả về đường dẫn tải.</p><div class="quota">5 GB · 1 GB tải/ngày<small>Hạn mức được nêu trong tài liệu</small></div></article>
+        <article class="card service-card rules"><span class="icon">🛡️</span><span class="service-tag">Authorization</span><h3>Security Rules</h3><p>Kiểm tra quyền ở phía máy chủ dựa trên danh tính và chủ sở hữu dữ liệu.</p><div class="quota">Bảo vệ cả Firestore lẫn Storage</div></article>
+      </div>
+      <div class="callout">Các hạn mức Spark có thể thay đổi theo thời điểm và cấu hình dự án — hãy kiểm tra trang giá Firebase trước khi triển khai.</div>
+    </section>
+
+    <section class="slide" aria-label="Slide 5: Kiến trúc tích hợp">
+      <p class="eyebrow">04 · Kiến trúc</p>
+      <h2>Rõ ràng trách nhiệm,<br><span class="accent">dễ thay đổi từng tầng.</span></h2>
+      <div class="architecture">
+        <article class="arch-box app"><h3>Flutter App</h3><div class="mini-list"><span>Presentation · pages / widgets</span><span>Business logic · use cases</span><span>Repository · Firebase services</span></div></article>
+        <div class="arch-arrow" aria-hidden="true">→</div>
+        <article class="arch-box"><h3>Firebase SDK</h3><p>Lớp cầu nối xử lý xác thực, truy vấn dữ liệu và tải file từ ứng dụng.</p><div class="mini-list"><span>FlutterFire packages</span><span>StreamBuilder / snapshots()</span></div></article>
+        <div class="arch-arrow" aria-hidden="true">→</div>
+        <article class="arch-box cloud"><h3>Firebase Cloud</h3><div class="mini-list"><span>🔐 Authentication</span><span>📄 Firestore · metadata</span><span>📦 Storage · file</span><span>🛡️ Security Rules</span></div></article>
+      </div>
+      <div class="callout">UI → Business Logic → Repository → Firebase SDK → Cloud. Rules kiểm tra quyền cho dữ liệu và file.</div>
+    </section>
+
+    <section class="slide" aria-label="Slide 6: Luồng dữ liệu">
+      <p class="eyebrow">05 · Luồng nghiệp vụ</p>
+      <h2>Một tài liệu đi từ máy người dùng<br><span class="accent">lên cloud như thế nào?</span></h2>
+      <div class="flow">
+        <article class="flow-step"><h3>Đăng nhập</h3><p>Google Sign-In → Firebase Auth trả về <code>uid</code>.</p></article>
+        <article class="flow-step"><h3>Tải file</h3><p>App upload file vào Storage theo thư mục của user.</p></article>
+        <article class="flow-step"><h3>Lưu metadata</h3><p>Firestore lưu thông tin tài liệu và <code>fileUrl</code>.</p></article>
+        <article class="flow-step"><h3>Đọc / xoá</h3><p>Stream danh sách theo user; khi xoá, dọn metadata và file.</p></article>
+      </div>
+      <div class="grid two" style="margin-top:18px">
+        <article class="card"><h3 class="cyan">Metadata → Firestore</h3><p>Tên tài liệu, chủ sở hữu, thông tin mô tả và URL file.</p></article>
+        <article class="card"><h3 class="accent">Nội dung file → Storage</h3><p>PDF, Word, slide và các tệp đính kèm dung lượng lớn.</p></article>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="Slide 7: Quy trình thiết lập">
+      <p class="eyebrow">06 · Bắt đầu triển khai</p>
+      <h2>Setup Firebase<br><span class="accent">theo bốn chặng.</span></h2>
+      <div class="setup">
+        <article class="setup-step"><h3>Tạo project</h3><p>Tạo project trong Firebase Console; mời thành viên và cấp đúng quyền.</p></article>
+        <article class="setup-step"><h3>Cài công cụ</h3><p>Cài Firebase CLI và FlutterFire CLI; đăng nhập tài khoản được cấp quyền.</p></article>
+        <article class="setup-step"><h3>Cấu hình app</h3><p>Chạy <code>flutterfire configure</code>, chọn project và nền tảng đích.</p></article>
+        <article class="setup-step"><h3>Khởi tạo SDK</h3><p>Thêm packages, gọi <code>Firebase.initializeApp()</code> trước khi chạy app.</p></article>
+      </div>
+      <div class="grid two" style="margin-top:16px">
+        <article class="card"><h3>Packages chính</h3><p><code>firebase_core</code> · <code>firebase_auth</code> · <code>cloud_firestore</code> · <code>firebase_storage</code> · <code>google_sign_in</code></p></article>
+        <article class="card"><h3>Thiết lập dịch vụ</h3><p>Bật Google Sign-In; tạo Firestore và Storage; chọn region gần người dùng, ví dụ <code>asia-southeast1</code>.</p></article>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="Slide 8: Bảo mật">
+      <p class="eyebrow">07 · Bảo mật</p>
+      <h2>Danh tính phải gắn với<br><span class="accent">quyền sở hữu.</span></h2>
+      <div class="security-pair">
+        <article class="card security-card">
+          <h3>Cloud Firestore</h3>
+          <p>Chỉ cho phép thao tác khi đã đăng nhập và <code>uid</code> khớp với <code>ownerId</code>.</p>
+          <span class="codeblock"><span class="rule-line">allow read, write: if request.auth != null</span><span class="rule-line">  &amp;&amp; request.auth.uid == resource.data.ownerId;</span><span class="rule-line">allow create: if request.auth != null</span><span class="rule-line">  &amp;&amp; request.auth.uid == request.resource.data.ownerId;</span></span>
+        </article>
+        <article class="card security-card storage-rule">
+          <h3>Cloud Storage</h3>
+          <p>Lưu file theo đường dẫn riêng của user; đối chiếu <code>uid</code> với <code>userId</code>.</p>
+          <span class="codeblock"><span class="rule-line">match /documents/{<span class="rule-emphasis">userId</span>}/{allPaths=**} {</span><span class="rule-line">  allow read, write: if request.auth != null</span><span class="rule-line">    &amp;&amp; request.auth.uid == userId;</span><span class="rule-line">}</span></span>
+        </article>
+      </div>
+      <div class="callout"><strong>Quan trọng:</strong> kiểm thử Rules bằng Firebase Emulator Suite; không dùng Test mode để phát hành. Rules mẫu cần được rà soát cho đúng schema và thao tác thực tế.</div>
+    </section>
+
+    <section class="slide" aria-label="Slide 9: Quy trình làm việc nhóm và Git">
+      <p class="eyebrow">08 · Làm việc nhóm</p>
+      <h2>Project chung,<br><span class="accent">cấu hình riêng từng máy.</span></h2>
+      <div class="grid two">
+        <article class="card">
+          <span class="icon">👥</span><h3>Quyền truy cập tối thiểu</h3>
+          <ul><li>Mời thành viên trong Project Settings.</li><li>Dùng Editor khi thật sự cần chỉnh sửa.</li><li>Giữ số Owner ở mức tối thiểu.</li></ul>
+        </article>
+        <article class="card">
+          <span class="icon">🗂️</span><h3>Không đưa config Firebase lên Git</h3>
+          <ul><li><code>lib/firebase_options.dart</code></li><li><code>android/app/google-services.json</code></li><li><code>ios/Runner/GoogleService-Info.plist</code></li></ul>
+        </article>
+      </div>
+      <div class="git-flow" aria-label="Quy trình thành viên mới">
+        <span>Clone repo</span><b>→</b><span><code>flutter pub get</code></span><b>→</b><span><code>flutterfire configure</code></span><b>→</b><span><code>flutter run</code></span>
+      </div>
+      <div class="callout">Không chia sẻ file cấu hình qua chat. Mỗi thành viên được cấp quyền sẽ tự cấu hình project trên máy của mình.</div>
+    </section>
+
+    <section class="slide" aria-label="Slide 10: FAQ">
+      <p class="eyebrow">09 · FAQ</p>
+      <h2>Những điều cần biết<br><span class="accent">trước khi mở rộng.</span></h2>
+      <div class="faq-list">
+        <article class="faq"><h3>Firestore có full-text search?</h3><p>Không. Nếu cần tìm kiếm toàn văn, cân nhắc Algolia hoặc Elasticsearch.</p></article>
+        <article class="faq"><h3>Mất mạng thì sao?</h3><p>Firestore hỗ trợ offline trên Android/iOS và đồng bộ lại khi có mạng; Web cần cấu hình thêm.</p></article>
+        <article class="faq"><h3>Vượt gói miễn phí?</h3><p>Theo dõi quota và chi phí; Blaze tính phí theo mức sử dụng.</p></article>
+        <article class="faq"><h3>Xoá tài liệu cần làm gì?</h3><p>Xoá metadata Firestore và file Storage; cân nhắc xử lý lỗi để tránh dữ liệu mồ côi.</p></article>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="Slide 11: Kiểm tra trước khi chạy">
+      <p class="eyebrow">10 · Demo / kiểm tra</p>
+      <h2>Từ “đã cấu hình”<br><span class="accent">đến “chạy an toàn”.</span></h2>
+      <div class="grid two">
+        <article class="card">
+          <h3>Checklist khởi chạy</h3>
+          <div class="checklist">
+            <div class="check-item">Đã gọi <code>Firebase.initializeApp()</code>.</div>
+            <div class="check-item">Đã bật Google Sign-In và thêm SHA-1 cho Android.</div>
+            <div class="check-item">Firestore và Storage dùng đúng project / region.</div>
+            <div class="check-item">Rules giới hạn truy cập theo user; đã kiểm thử.</div>
+            <div class="check-item">Config cục bộ nằm ngoài Git.</div>
+          </div>
+        </article>
+        <article class="card">
+          <h3>Mẹo xử lý lỗi nhanh</h3>
+          <ul>
+            <li><code>no-app</code> → kiểm tra khởi tạo Firebase.</li>
+            <li><code>sign_in_failed</code> → kiểm tra SHA-1 / cấu hình Android.</li>
+            <li><code>PERMISSION_DENIED</code> → kiểm tra trạng thái đăng nhập và Rules.</li>
+            <li><code>command not found</code> → kiểm tra PATH của FlutterFire CLI.</li>
+            <li><code>Unsupported platform</code> → chạy lại <code>flutterfire configure</code>.</li>
+          </ul>
+        </article>
+      </div>
+      <div class="callout">Kiểm thử luồng đăng nhập → upload → xem danh sách → xoá, trên cả trạng thái có mạng và mất mạng.</div>
+    </section>
+
+    <section class="slide" aria-label="Slide 12: Kết luận và tài liệu tham khảo">
+      <p class="eyebrow">11 · Kết luận</p>
+      <div class="closing">
+        <h2>Build nhanh.<br><span class="accent">Bảo vệ đúng.</span><br>Đồng bộ liền mạch.</h2>
+        <p class="lead">Firebase giúp StudyDocs tập trung vào trải nghiệm học tập — còn nền tảng đảm nhiệm xác thực, lưu trữ và đồng bộ dữ liệu.</p>
+        <div class="grid two">
+          <article class="card"><h3>Thông điệp chính</h3><p>Auth định danh · Firestore quản lý metadata · Storage lưu file · Rules giữ quyền truy cập.</p></article>
+          <article class="card"><h3>Tài liệu tham khảo</h3><ul class="sources">
+            <li><a href="https://firebase.google.com/docs/flutter/setup?hl=vi" target="_blank" rel="noreferrer">Firebase Flutter Setup</a></li>
+            <li><a href="https://firebase.google.com/docs/auth" target="_blank" rel="noreferrer">Firebase Authentication</a></li>
+            <li><a href="https://firebase.google.com/docs/firestore" target="_blank" rel="noreferrer">Cloud Firestore</a></li>
+            <li><a href="https://firebase.google.com/docs/storage" target="_blank" rel="noreferrer">Cloud Storage &amp; Security Rules</a></li>
+          </ul></article>
+        </div>
+        <p class="lead accent" style="margin-top:28px">Cảm ơn! · Hỏi đáp</p>
+      </div>
+    </section>
+  </main>
+
+  <nav class="controls" aria-label="Điều hướng slide">
+    <div class="control-buttons">
+      <button class="control-button" id="previous" type="button" aria-label="Slide trước" title="Slide trước (←)">←</button>
+      <button class="control-button" id="next" type="button" aria-label="Slide tiếp theo" title="Slide tiếp theo (→)">→</button>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-track" role="progressbar" aria-label="Tiến độ bài trình chiếu" aria-valuemin="1" aria-valuemax="12" aria-valuenow="1"><div class="progress-bar"></div></div>
+      <span class="counter" aria-live="polite">01 / 12</span>
+    </div>
+    <div class="dots" aria-label="Chọn slide"></div>
+    <span class="hint">← → điều hướng · F toàn màn hình</span>
+  </nav>
+
+  <script>
+    (() => {
+      const slides = [...document.querySelectorAll(".slide")];
+      const dotsContainer = document.querySelector(".dots");
+      const progress = document.querySelector(".progress-track");
+      const progressBar = document.querySelector(".progress-bar");
+      const counter = document.querySelector(".counter");
+      let current = 0;
+      let touchStartX = null;
+
+      slides.forEach((slide, index) => {
+        const dot = document.createElement("button");
+        dot.className = "dot";
+        dot.type = "button";
+        dot.setAttribute("aria-label", `Đi tới slide ${index + 1}`);
+        dot.addEventListener("click", () => show(index));
+        dotsContainer.append(dot);
+      });
+      const dots = [...dotsContainer.querySelectorAll(".dot")];
+
+      function show(index) {
+        current = Math.max(0, Math.min(index, slides.length - 1));
+        slides.forEach((slide, i) => {
+          const active = i === current;
+          slide.classList.toggle("active", active);
+          slide.setAttribute("aria-hidden", String(!active));
+        });
+        dots.forEach((dot, i) => {
+          if (i === current) dot.setAttribute("aria-current", "true");
+          else dot.removeAttribute("aria-current");
+        });
+        const value = ((current + 1) / slides.length) * 100;
+        progressBar.style.width = `${value}%`;
+        progress.setAttribute("aria-valuenow", String(current + 1));
+        counter.textContent = `${String(current + 1).padStart(2, "0")} / ${String(slides.length).padStart(2, "0")}`;
+        document.title = `${String(current + 1).padStart(2, "0")} · ${slides[current].getAttribute("aria-label").replace(/^Slide \d+: /, "")} — Firebase × StudyDocs`;
+      }
+
+      function next() { show(current + 1); }
+      function previous() { show(current - 1); }
+      document.querySelector("#next").addEventListener("click", next);
+      document.querySelector("#previous").addEventListener("click", previous);
+      document.addEventListener("keydown", event => {
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
+        if (["ArrowRight", "PageDown", " "].includes(event.key)) { event.preventDefault(); next(); }
+        else if (["ArrowLeft", "PageUp"].includes(event.key)) { event.preventDefault(); previous(); }
+        else if (event.key === "Home") show(0);
+        else if (event.key === "End") show(slides.length - 1);
+        else if (event.key.toLowerCase() === "f") {
+          if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+          else document.exitFullscreen?.();
+        }
+      });
+      document.addEventListener("touchstart", event => { touchStartX = event.changedTouches[0].screenX; }, { passive: true });
+      document.addEventListener("touchend", event => {
+        if (touchStartX === null) return;
+        const delta = event.changedTouches[0].screenX - touchStartX;
+        if (Math.abs(delta) > 65) delta < 0 ? next() : previous();
+        touchStartX = null;
+      }, { passive: true });
+      show(0);
+    })();
+  </script>
+</body>
+</html>
