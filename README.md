@@ -18,8 +18,9 @@
 8. [Code mẫu tích hợp](#8--code-mẫu-tích-hợp)
 9. [Đánh giá tác động: Bảo mật, Chi phí, Hiệu suất](#9--đánh-giá-tác-động-bảo-mật-chi-phí-hiệu-suất)
 10. [Slide tìm hiểu Firebase](#10--slide-tìm-hiểu-firebase--cách-setup)
-11. [Phân công công việc nhóm](#11--phân-công-công-việc-nhóm)
-12. [Timeline & Hướng dẫn chạy](#12--timeline--hướng-dẫn-chạy)
+11. [🌿 Chiến lược Branch & Phân công chi tiết](#11--chiến-lược-branch--phân-công-chi-tiết)
+12. [🔄 Quy trình Pull / Merge / Review](#12--quy-trình-pull--merge--review)
+13. [Timeline & Hướng dẫn chạy](#13--timeline--hướng-dẫn-chạy)
 
 ---
 
@@ -751,79 +752,348 @@ StreamBuilder<List<Map<String, dynamic>>>(
 2. Cùng dùng chung project.
 3. Trên Git: một người chạy `flutterfire configure` và commit `firebase_options.dart` + `google-services.json`.
 
-### 10.4. Lưu ý khi bảo vệ
+---
 
-- Chuẩn bị **demo trực tiếp** nếu có thể.
-- Câu hỏi thường gặp:
-  - *Tại sao chọn Firebase?* → Miễn phí, tích hợp Flutter tốt.
-  - *Bảo mật thế nào?* → Security Rules + Auth + App Check.
-  - *Chi phí khi scale?* → Blaze Plan, tối ưu query.
+## 11. 🌿 Chiến lược Branch & Phân công chi tiết
+
+### 11.1. Sơ đồ nhánh Git
+
+```text
+main (ổn định, nộp bài)
+ │
+ ├── develop (tích hợp, Trưởng quản lý)
+ │    │
+ │    ├── feature/auth-ha                    ← Hàn Hoàng Hà
+ │    ├── feature/storage-firestore-dai      ← Nguyễn Đăng Đại
+ │    ├── feature/evaluation-duc             ← Phương Văn Đức
+ │    └── docs/architecture-truong           ← Nguyễn Thế Trưởng
+ │
+ └── (hotfix/* nếu cần)
+```
+
+**Quy tắc chung:**
+- `main`: Chỉ chứa code/README đã review, sẵn sàng nộp. **Không ai push trực tiếp**.
+- `develop`: Nhánh tích hợp. Trưởng là người merge vào đây.
+- `feature/*`: Mỗi thành viên làm việc trên nhánh riêng, tạo PR vào `develop`.
+- `docs/*`: Nhánh cho tài liệu (README, slide).
+
+### 11.2. Chi tiết từng nhánh
 
 ---
 
-## 11. 👥 Phân công công việc nhóm
+#### 🌿 Nhánh `docs/architecture-truong`
 
-### 11.1. Bảng phân công
+| Mục | Nội dung |
+|---|---|
+| **Chủ sở hữu** | Nguyễn Thế Trưởng (Leader) |
+| **Base branch** | `develop` |
+| **Mục đích** | Viết tài liệu kiến trúc, sơ đồ, tổng hợp README cuối |
+| **File được sửa** | `README.md`, `docs/architecture.md`, `docs/diagrams/*.mmd` |
+| **Không được sửa** | `lib/services/firebase/*`, `lib/pages/*`, `pubspec.yaml` |
 
-| Thành viên | Vai trò | Nhiệm vụ | Sản phẩm |
-|---|---|---|---|
-| **Nguyễn Thế Trưởng** (Leader) | Tổng hợp & Kiến trúc | • Viết mục 1–3<br>• Vẽ sơ đồ kiến trúc<br>• Tổng hợp slide<br>• Thuyết trình chính | Mục 1–3, sơ đồ, slide 1/3/4/5/12 |
-| **Hàn Hoàng Hà** | Firebase Auth & Setup | • Setup Firebase project<br>• Tích hợp Google Sign-In<br>• Viết mục 7 | Code Auth, mục 7, slide 2/6 |
-| **Nguyễn Đăng Đại** | Cloud Storage & Firestore | • Upload file lên Storage<br>• CRUD metadata Firestore<br>• Viết mục 6 | Code Storage + Document, mục 6, slide 7/8 |
-| **Phương Văn Đức** | Đánh giá & So sánh | • Bảng so sánh (mục 5)<br>• Đánh giá bảo mật/chi phí/hiệu suất (mục 9) | Mục 5, 9, slide 9/10 |
+**Công việc cụ thể:**
+- [ ] Viết mục 1, 2, 3 (giới thiệu, phân tích, điểm nghẽn).
+- [ ] Vẽ sơ đồ Mermaid kiến trúc tích hợp (mục 6).
+- [ ] Tổng hợp slide 1, 3, 4, 5, 12.
+- [ ] Review & merge PR của các thành viên vào `develop`.
+- [ ] Cuối cùng merge `develop` → `main`.
 
-### 11.2. Sơ đồ phân công
+**Lệnh tạo & push:**
+
+```bash
+git checkout develop
+git pull origin develop
+git checkout -b docs/architecture-truong
+
+# ... viết tài liệu ...
+
+git add README.md docs/
+git commit -m "docs: kiến trúc tích hợp Cloud & phân tích hệ thống"
+git push origin docs/architecture-truong
+```
+
+**Tạo PR:** `docs/architecture-truong` → `develop`.
+
+---
+
+#### 🌿 Nhánh `feature/auth-ha`
+
+| Mục | Nội dung |
+|---|---|
+| **Chủ sở hữu** | Hàn Hoàng Hà |
+| **Base branch** | `develop` |
+| **Mục đích** | Setup Firebase project + tích hợp Google Sign-In |
+| **File được sửa** | `lib/services/firebase/auth_service.dart`, `lib/pages/login_page.dart`, `lib/main.dart`, `pubspec.yaml`, `lib/firebase_options.dart`, `android/app/google-services.json` |
+| **Không được sửa** | `lib/struct/*`, `lib/database/*`, `README.md` |
+
+**Công việc cụ thể:**
+- [ ] Chạy `flutterfire configure` tạo `firebase_options.dart`.
+- [ ] Thêm package: `firebase_core`, `firebase_auth`, `google_sign_in`.
+- [ ] Viết `AuthService` (xem mục 8.1).
+- [ ] Tạo `LoginPage` với nút "Đăng nhập Google".
+- [ ] Cập nhật `main.dart` khởi tạo Firebase.
+- [ ] Bật Google Sign-In trên Firebase Console + thêm SHA-1.
+- [ ] Viết mục 7 (hướng dẫn setup) vào `docs/firebase-setup.md`.
+- [ ] Làm slide 2, 6.
+
+**Lệnh tạo & push:**
+
+```bash
+git checkout develop
+git pull origin develop
+git checkout -b feature/auth-ha
+
+# ... code ...
+
+git add lib/services/firebase/ lib/pages/login_page.dart lib/main.dart pubspec.yaml
+git commit -m "feat(auth): tích hợp Firebase Authentication với Google Sign-In"
+git push origin feature/auth-ha
+```
+
+**Tạo PR:** `feature/auth-ha` → `develop`.
+
+---
+
+#### 🌿 Nhánh `feature/storage-firestore-dai`
+
+| Mục | Nội dung |
+|---|---|
+| **Chủ sở hữu** | Nguyễn Đăng Đại |
+| **Base branch** | `develop` (sau khi Hà merge Auth xong) |
+| **Mục đích** | Tích hợp Cloud Storage + Firestore CRUD |
+| **File được sửa** | `lib/services/firebase/storage_service.dart`, `lib/services/firebase/document_service.dart`, `lib/pages/home_page.dart`, `firestore.rules`, `storage.rules` |
+| **Không được sửa** | `lib/services/firebase/auth_service.dart` (của Hà), `README.md` |
+
+**Công việc cụ thể:**
+- [ ] Thêm package: `cloud_firestore`, `firebase_storage`.
+- [ ] Viết `StorageService` (xem mục 8.2).
+- [ ] Viết `DocumentService` (xem mục 8.3).
+- [ ] Cập nhật `HomePage` dùng `StreamBuilder` với `watchMyDocuments()`.
+- [ ] Viết `firestore.rules` + `storage.rules`.
+- [ ] Viết mục 6 (luồng dữ liệu) vào `docs/data-flow.md`.
+- [ ] Làm slide 7, 8.
+
+**Lưu ý phụ thuộc:** Phải chờ Hà merge `feature/auth-ha` vào `develop` trước, vì cần `_uid` từ `AuthService`.
+
+**Lệnh tạo & push:**
+
+```bash
+git checkout develop
+git pull origin develop
+git checkout -b feature/storage-firestore-dai
+
+# ... code ...
+
+git add lib/services/firebase/ lib/pages/home_page.dart firestore.rules storage.rules
+git commit -m "feat(storage): tích hợp Cloud Storage & Firestore CRUD"
+git push origin feature/storage-firestore-dai
+```
+
+**Tạo PR:** `feature/storage-firestore-dai` → `develop`.
+
+---
+
+#### 🌿 Nhánh `feature/evaluation-duc`
+
+| Mục | Nội dung |
+|---|---|
+| **Chủ sở hữu** | Phương Văn Đức |
+| **Base branch** | `develop` |
+| **Mục đích** | Viết bảng so sánh + đánh giá tác động (bảo mật, chi phí, hiệu suất) |
+| **File được sửa** | `docs/comparison.md`, `docs/evaluation.md`, `docs/security-rules.md` |
+| **Không được sửa** | `lib/*`, `pubspec.yaml` (chỉ làm tài liệu) |
+
+**Công việc cụ thể:**
+- [ ] Viết bảng so sánh truyền thống vs Cloud (mục 5) vào `docs/comparison.md`.
+- [ ] Viết đánh giá bảo mật, chi phí, hiệu suất (mục 9) vào `docs/evaluation.md`.
+- [ ] Viết hướng dẫn Security Rules vào `docs/security-rules.md`.
+- [ ] Làm slide 9, 10.
+
+**Lệnh tạo & push:**
+
+```bash
+git checkout develop
+git pull origin develop
+git checkout -b feature/evaluation-duc
+
+# ... viết tài liệu ...
+
+git add docs/
+git commit -m "docs: so sánh mô hình và đánh giá tác động Cloud"
+git push origin feature/evaluation-duc
+```
+
+**Tạo PR:** `feature/evaluation-duc` → `develop`.
+
+---
+
+### 11.3. Bảng tóm tắt nhánh
+
+| Nhánh | Chủ sở hữu | Base | Merge vào | File chính | Phụ thuộc |
+|---|---|---|---|---|---|
+| `docs/architecture-truong` | Trưởng | `develop` | `develop` | `README.md`, `docs/architecture.md` | — |
+| `feature/auth-ha` | Hà | `develop` | `develop` | `lib/services/firebase/auth_service.dart` | — |
+| `feature/storage-firestore-dai` | Đại | `develop` | `develop` | `lib/services/firebase/storage_service.dart`, `document_service.dart` | Phụ thuộc `auth-ha` |
+| `feature/evaluation-duc` | Đức | `develop` | `develop` | `docs/comparison.md`, `docs/evaluation.md` | — |
+
+---
+
+## 12. 🔄 Quy trình Pull / Merge / Review
+
+### 12.1. Quy trình chuẩn cho thành viên
+
+```bash
+# 1. Cập nhật develop mới nhất
+git checkout develop
+git pull origin develop
+
+# 2. Tạo nhánh riêng từ develop
+git checkout -b feature/<tên>-<thành viên>
+
+# 3. Làm việc, commit thường xuyên
+git add <files>
+git commit -m "feat(scope): mô tả ngắn"
+
+# 4. Trước khi push, rebase với develop để tránh conflict
+git fetch origin
+git rebase origin/develop
+
+# 5. Push nhánh lên remote
+git push origin feature/<tên>-<thành viên>
+
+# 6. Lên GitHub tạo Pull Request → develop
+```
+
+### 12.2. Quy trình Review & Merge (dành cho Trưởng)
+
+**Khi có PR mới:**
+
+1. **Kiểm tra tự động:**
+   ```bash
+   git fetch origin
+   git checkout feature/<nhánh-cần-review>
+   flutter pub get
+   flutter analyze
+   flutter test
+   ```
+
+2. **Kiểm tra conflict:**
+   ```bash
+   git checkout develop
+   git pull origin develop
+   git merge --no-commit --no-ff feature/<nhánh>
+   # Nếu có conflict → yêu cầu thành viên rebase lại
+   git merge --abort
+   ```
+
+3. **Approve & Merge:**
+   - Trên GitHub: **Squash and merge** (giữ lịch sử sạch).
+   - Hoặc command line:
+   ```bash
+   git checkout develop
+   git merge --no-ff feature/<nhánh> -m "merge: <mô tả>"
+   git push origin develop
+   ```
+
+4. **Xóa nhánh sau khi merge:**
+   ```bash
+   git branch -d feature/<nhánh>
+   git push origin --delete feature/<nhánh>
+   ```
+
+### 12.3. Quy tắc đặt tên commit (Conventional Commits)
+
+| Tiền tố | Ý nghĩa | Ví dụ |
+|---|---|---|
+| `feat:` | Thêm tính năng | `feat(auth): thêm Google Sign-In` |
+| `fix:` | Sửa lỗi | `fix(storage): sửa lỗi upload file` |
+| `docs:` | Tài liệu | `docs: cập nhật README mục 6` |
+| `refactor:` | Tái cấu trúc | `refactor(service): gộp AuthService` |
+| `chore:` | Việc lặt vặt | `chore: cập nhật pubspec` |
+
+### 12.4. Xử lý conflict thường gặp
+
+**Conflict ở `pubspec.yaml`:**
+
+```bash
+git checkout develop
+git pull origin develop
+git checkout feature/<nhánh>
+git rebase origin/develop
+# Sửa conflict trong pubspec.yaml (giữ cả 2 dependency)
+git add pubspec.yaml
+git rebase --continue
+git push origin feature/<nhánh> --force-with-lease
+```
+
+**Conflict ở `README.md`:**
+
+> **Quy tắc**: Chỉ **Trưởng** được sửa `README.md` trên nhánh `docs/architecture-truong`. Các thành viên khác viết tài liệu trong `docs/*.md` riêng để tránh conflict.
+
+### 12.5. Checklist trước khi tạo PR
+
+- [ ] Đã `git rebase origin/develop` và không còn conflict.
+- [ ] `flutter analyze` không có lỗi.
+- [ ] `flutter test` pass.
+- [ ] Commit message theo Conventional Commits.
+- [ ] Đã cập nhật `docs/*.md` tương ứng với phần mình làm.
+- [ ] Không sửa file ngoài phạm vi cho phép.
+
+### 12.6. Sơ đồ luồng Git
 
 ```mermaid
-graph TD
-    subgraph Leader["👑 Nguyễn Thế Trưởng"]
-        L1[Phân tích hệ thống]
-        L2[Thiết kế kiến trúc]
-        L3[Tổng hợp slide]
-    end
+gitGraph
+    commit id: "init"
+    branch develop
+    checkout develop
+    commit id: "setup"
 
-    subgraph Ha["🔐 Hàn Hoàng Hà"]
-        H1[Setup Firebase]
-        H2[Google Sign-In]
-        H3[Slide Auth]
-    end
+    branch feature/auth-ha
+    checkout feature/auth-ha
+    commit id: "feat: auth"
+    commit id: "feat: login page"
+    checkout develop
+    merge feature/auth-ha
 
-    subgraph Dai["📦 Nguyễn Đăng Đại"]
-        D1[Cloud Storage]
-        D2[Firestore CRUD]
-        D3[Slide Storage/Firestore]
-    end
+    branch feature/storage-firestore-dai
+    checkout feature/storage-firestore-dai
+    commit id: "feat: storage"
+    commit id: "feat: firestore"
+    checkout develop
+    merge feature/storage-firestore-dai
 
-    subgraph Duc["📊 Phương Văn Đức"]
-        U1[So sánh mô hình]
-        U2[Đánh giá tác động]
-        U3[Slide đánh giá]
-    end
+    branch feature/evaluation-duc
+    checkout feature/evaluation-duc
+    commit id: "docs: comparison"
+    commit id: "docs: evaluation"
+    checkout develop
+    merge feature/evaluation-duc
 
-    L1 --> L3
-    L2 --> L3
-    H1 --> H2 --> H3
-    D1 --> D2 --> D3
-    U1 --> U2 --> U3
+    branch docs/architecture-truong
+    checkout docs/architecture-truong
+    commit id: "docs: architecture"
+    commit id: "docs: readme final"
+    checkout develop
+    merge docs/architecture-truong
 
-    style Leader fill:#E3F2FD,stroke:#1565C0,stroke-width:2px;
-    style Ha fill:#FFF3E0,stroke:#E65100,stroke-width:2px;
-    style Dai fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px;
-    style Duc fill:#F3E5F5,stroke:#6A1B9A,stroke-width:2px;
+    checkout main
+    merge develop tag: "v1.0-submit"
 ```
 
 ---
 
-## 12. 📅 Timeline & Hướng dẫn chạy
+## 13. 📅 Timeline & Hướng dẫn chạy
 
-### 12.1. Timeline 2 tuần
+### 13.1. Timeline 2 tuần (gắn với nhánh)
 
 | Tuần | Trưởng | Hà | Đại | Đức |
 |---|---|---|---|---|
-| **Tuần 1** | Viết mục 1–3, vẽ sơ đồ | Setup Firebase, code Auth | Code Storage + Firestore | Viết bảng so sánh |
-| **Tuần 2** | Tổng hợp slide, review | Hoàn thiện slide Auth | Hoàn thiện slide Storage/Firestore | Hoàn thiện slide đánh giá |
+| **Tuần 1 — Ngày 1–3** | Tạo repo, `develop`, mời thành viên | Tạo nhánh `feature/auth-ha`, setup Firebase | Chờ Auth xong | Tạo nhánh `feature/evaluation-duc`, viết so sánh |
+| **Tuần 1 — Ngày 4–7** | Vẽ sơ đồ, viết mục 1–3 trên `docs/architecture-truong` | Code Auth, PR vào `develop` | Rebase từ `develop`, code Storage/Firestore | Hoàn thiện evaluation, PR vào `develop` |
+| **Tuần 2 — Ngày 8–10** | Review PR, merge vào `develop` | Làm slide 2, 6 | PR Storage/Firestore | Làm slide 9, 10 |
+| **Tuần 2 — Ngày 11–14** | Tổng hợp README, merge `develop` → `main` | Review chéo | Review chéo | Review chéo |
 
-### 12.2. Checklist
+### 13.2. Checklist tổng
 
 - [ ] **Trưởng**: Tạo Firebase project, mời thành viên.
 - [ ] **Hà**: Chạy `flutterfire configure`, setup Google Sign-In.
@@ -832,42 +1102,48 @@ graph TD
 - [ ] **Cả nhóm**: Làm slide phần mình, Trưởng tổng hợp.
 - [ ] **Cả nhóm**: Review chéo trước khi nộp.
 
-### 12.3. Hướng dẫn cài đặt & chạy
+### 13.3. Hướng dẫn cài đặt & chạy
 
 ```bash
-# Bước 1: Cài dependencies
+# Bước 1: Clone repo
+git clone <repo-url>
+cd studydocs
+
+# Bước 2: Cài dependencies
 flutter pub get
 
-# Bước 2: Sinh mã nguồn Drift (nếu còn dùng)
+# Bước 3: Sinh mã nguồn Drift (nếu còn dùng)
 dart run build_runner build --delete-conflicting-outputs
 
-# Bước 3: Cấu hình Firebase (chỉ chạy 1 lần)
+# Bước 4: Cấu hình Firebase (chỉ chạy 1 lần)
 flutterfire configure
 
-# Bước 4: Chạy app
+# Bước 5: Chạy app
 flutter run -d chrome    # Web
 flutter run              # Windows / Emulator
 
-# Bước 5: Chạy test
+# Bước 6: Chạy test
 flutter test test/document_struct_test.dart
 ```
 
-### 12.4. Lưu ý khi nộp bài
+### 13.4. Lưu ý khi nộp bài
 
-- **README.md** là sản phẩm chính.
-- **Slide** (PDF/PPTX) là sản phẩm trình bày.
+- **README.md** là sản phẩm chính (nằm trên `main`).
+- **Slide** (PDF/PPTX) là sản phẩm trình bày (đặt trong `docs/slides/`).
 - **Code** (nếu có) là minh họa — không bắt buộc 100%.
 - **Demo** (nếu có) giúp tăng điểm.
+- **Tag `v1.0-submit`** trên `main` để đánh dấu phiên bản nộp.
 
 ---
 
 ## 📌 Tóm tắt việc cần làm ngay
 
-1. **Trưởng**: Tạo Firebase project, mời thành viên.
-2. **Hà**: Chạy `flutterfire configure`, setup Google Sign-In.
-3. **Đại**: Viết hàm upload file + lưu Firestore.
-4. **Đức**: Viết bảng so sánh và đánh giá.
-5. **Cả nhóm**: Mỗi người làm slide phần mình, Trưởng tổng hợp.
+1. **Trưởng**: Tạo repo, nhánh `main` + `develop`, Firebase project, mời thành viên, tạo nhánh `docs/architecture-truong`.
+2. **Hà**: Tạo nhánh `feature/auth-ha`, chạy `flutterfire configure`, setup Google Sign-In.
+3. **Đại**: Chờ Hà merge xong, tạo nhánh `feature/storage-firestore-dai`, code Storage + Firestore.
+4. **Đức**: Tạo nhánh `feature/evaluation-duc`, viết tài liệu so sánh + đánh giá.
+5. **Cả nhóm**: Làm slide phần mình, tạo PR vào `develop`.
+6. **Trưởng**: Review, merge, tổng hợp README, merge `develop` → `main`, tag `v1.0-submit`.
 
 > ✅ **Nguyên tắc**: Không cần code hoàn chỉnh 100% — chỉ cần **phân tích đúng** và **phương án khả thi**. Slide là phần quan trọng nhất.
 
@@ -881,3 +1157,5 @@ flutter test test/document_struct_test.dart
 - [Cloud Storage for Firebase](https://firebase.google.com/docs/storage)
 - [FlutterFire Documentation](https://firebase.flutter.dev/)
 - [Firebase Security Rules](https://firebase.google.com/docs/rules)
+- [Conventional Commits](https://www.conventionalcommits.org/)
+- [Git Flow đơn giản hóa](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow)
